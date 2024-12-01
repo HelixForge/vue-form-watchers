@@ -13,6 +13,7 @@
   },
   "homepage": "https://github.com/HelixForge/vue-form-watchers#readme",
   "dependencies": {
-    "vue": "^3.0.0"
+    "vue": "^3.0.0",
+    "vue-form-watchers": "^0.1.0"
   }
 }
