@@ -1,19 +1,18 @@
 {
   "name": "vue-form-watchers",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HelixForge/vue-form-watchers.git"
   },
+  "bugs": {
+    "url": "https://github.com/HelixForge/vue-form-watchers/issues"
+  },
+  "homepage": "https://github.com/HelixForge/vue-form-watchers#readme",
   "dependencies": {
-    "vue": "^3.5.13"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.1",
-    "vite": "^6.0.1",
-    "vite-plugin-vue-devtools": "^7.6.5"
+    "vue": "^3.0.0"
   }
 }
