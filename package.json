@@ -1,9 +1,11 @@
 {
   "name": "vue-form-watchers",
-  "version": "0.1.0",
+  "description": "A utility to dynamically create debounced watchers for reactive form fields in Vue 3.",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HelixForge/vue-form-watchers.git"
@@ -15,5 +17,11 @@
   "dependencies": {
     "vue": "^3.0.0",
     "vue-form-watchers": "^0.1.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js"
+    }
   }
 }

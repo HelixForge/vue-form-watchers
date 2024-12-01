@@ -1,5 +1,11 @@
 import { watch } from 'vue';
 
+/**
+ * Dynamically create debounced watchers for form fields.
+ * @param {Object} formObject - The reactive form object.
+ * @param {Function} updateFunction - Callback for updates (key, value).
+ * @param {Object} options - Optional settings { debounceTime, immediate }.
+ */
 export function createFormWatchers(formObject, updateFunction, options = {}) {
     const { debounceTime = 500, immediate = false } = options;
 
