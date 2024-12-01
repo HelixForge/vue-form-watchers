@@ -2,10 +2,17 @@
   "name": "vue-form-watchers",
   "description": "A utility to dynamically create debounced watchers for reactive form fields in Vue 3.",
   "version": "0.2.0",
+  "license": "MIT",
+
   "private": false,
-  "type": "module",
-  "main": "dist/index.cjs.js",
-  "module": "dist/index.esm.js",
+  "type": "commonjs",
+  "types": "src/index.d.ts",
+  "main": "dist/index.js",
+  "module": "./dist/index.mjs",
+  "author": {
+    "name": "HelixForge",
+    "email": "chris@furman.tech"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HelixForge/vue-form-watchers.git"
@@ -15,12 +22,43 @@
   },
   "homepage": "https://github.com/HelixForge/vue-form-watchers#readme",
   "dependencies": {
-    "vue": "^3.0.0"
   },
   "exports": {
     ".": {
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.cjs.js"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "rollup": "^4.28.0",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.22.20"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "engines": {
+    "node": ">=14.16"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "forms",
+    "watchers",
+    "reactive",
+    "debounce",
+    "typescript"
+  ]
 }
