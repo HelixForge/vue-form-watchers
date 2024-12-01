@@ -1,0 +1,17 @@
+{
+  "name": "vue-form-watchers",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "type": "module",
+  "keywords": ["vue", "form", "watchers", "debounce"],
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}
