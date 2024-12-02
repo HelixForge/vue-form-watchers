@@ -1,5 +1,5 @@
 {
-  "name": "@helixforge/vue-form-watchers",
+  "name": "vue-form-watchers",
   "description": "A utility to dynamically create debounced watchers for reactive form fields in Vue 3.",
   "version": "0.2.2",
   "license": "MIT",
