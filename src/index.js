@@ -48,22 +48,32 @@ function createFieldWatcher(
     formObject,
     key,
     {
+        immediate,
         updateFunctionDebounced,
         skipExternalUpdates,
         isExternalUpdate,
-        isExternalUpdateFlag,
-        immediate,
-        logger
+        getIsExternalUpdateFlag,
+        logger,
+        exclude
     }
 ) {
+    if (exclude.includes(key)) {
+        logger.skippedUpdate(key, 'Field is excluded');
+        return;
+    }
+
     return watch(
         () => formObject[key],
         (newValue, oldValue) => {
             if (newValue === oldValue) return;
 
-            const updateSource = typeof isExternalUpdate === 'function'
-                ? (isExternalUpdate(key, newValue, oldValue) ? 'external' : 'user')
-                : (isExternalUpdateFlag ? 'external' : 'user');
+            // Check external update flag before custom logic
+            let updateSource = 'user';
+            if (getIsExternalUpdateFlag()) {
+                updateSource = 'external';
+            } else if (typeof isExternalUpdate === 'function' && isExternalUpdate(key, newValue, oldValue)) {
+                updateSource = 'external';
+            }
 
             logger.valueChange(key, {oldValue, newValue, source: updateSource});
 
@@ -71,7 +81,6 @@ function createFieldWatcher(
                 logger.skippedUpdate(key);
                 return;
             }
-
             updateFunctionDebounced(key, newValue, updateSource);
         },
         {deep: true, immediate}
@@ -84,19 +93,36 @@ function createFieldWatcher(
  */
 function createObjectWatcher(
     formObject,
-    createWatcherConfig
+    config
 ) {
-    return watch(formObject, (newVal, oldVal) => {
-        const newKeys = Object.keys(newVal);
-        const oldKeys = oldVal ? Object.keys(oldVal) : [];
+    const watchers = new Map();
 
-        const addedKeys = newKeys.filter(key => !oldKeys.includes(key));
+    const updateWatchers = (keys) => {
+        keys.forEach(key => {
+            if (!watchers.has(key)) {
+                const watcher = createFieldWatcher(formObject, key, config);
+                if (watcher) watchers.set(key, watcher);
+            }
+        });
+    };
 
-        if (addedKeys.length > 0) {
-            createWatcherConfig.logger.newProperties(addedKeys);
-            addedKeys.forEach(key => createFieldWatcher(formObject, key, createWatcherConfig));
-        }
-    }, {deep: true});
+    updateWatchers(Object.keys(formObject));
+
+
+
+
+
+    return watch(
+        () => Object.keys(formObject),
+        (newKeys, oldKeys = []) => {
+            const addedKeys = newKeys.filter(key => !oldKeys.includes(key));
+            if (addedKeys.length > 0) {
+                config.logger.newProperties(addedKeys);
+                updateWatchers(addedKeys);
+            }
+        },
+        {immediate: true, deep: true}
+    );
 }
 
 
@@ -111,18 +137,24 @@ export function createFormWatchers(formObject, updateFunction, options = {}) {
     if (typeof updateFunction !== 'function') {
         throw new Error('updateFunction must be a function');
     }
+    if (options.exclude !== undefined && !Array.isArray(options.exclude)) {
+        throw new Error('exclude option must be an array');
+    }
 
     const {
         debounceTime = 500,
         immediate = false,
         skipExternalUpdates = true,
         isExternalUpdate = null,
-        debug = false
+        debug = false,
+        exclude = []
     } = options;
-    console.log('debounceTime', debounceTime);
-    console.log('debug', debug);
+
+
     let isExternalUpdateFlag = false;
-    const logger = createLogger(debug);
+
+    const getIsExternalUpdateFlag = () => isExternalUpdateFlag;
+    const logger = createLogger(debug)
 
     // Create debounced update function
     const updateFunctionDebounced = createDebouncer(
@@ -135,22 +167,35 @@ export function createFormWatchers(formObject, updateFunction, options = {}) {
 
     // Common configuration for watchers
     const watcherConfig = {
+        immediate,
         updateFunctionDebounced,
         skipExternalUpdates,
         isExternalUpdate,
-        isExternalUpdateFlag,
-        immediate,
-        logger
+        getIsExternalUpdateFlag,
+        logger,
+        exclude
     };
 
+    // Store all watchers so we can clean them up later
+    const watchers = new Set();
+
+    // Modify createFieldWatcher to store the watcher
+    const createAndTrackFieldWatcher = (key) => {
+        const watcher = createFieldWatcher(formObject, key, watcherConfig);
+        if (watcher) watchers.add(watcher);
+        return watcher;
+    };
 
     // Create watchers for existing fields
-    Object.keys(formObject).forEach(key =>
-        createFieldWatcher(formObject, key, watcherConfig)
-    );
+    Object.keys(formObject).forEach(createAndTrackFieldWatcher);
+
 
     // Watch for new properties
-    createObjectWatcher(formObject, watcherConfig);
+    const objectWatcher = createObjectWatcher(formObject, {
+        ...watcherConfig,
+        createFieldWatcher: createAndTrackFieldWatcher
+    });
+    watchers.add(objectWatcher);
 
     // Return external update control
     return {
@@ -158,10 +203,20 @@ export function createFormWatchers(formObject, updateFunction, options = {}) {
             isExternalUpdateFlag = true;
             try {
                 callback();
-            } finally {
+                Promise.resolve().then(() => {
+                    isExternalUpdateFlag = false;
+                });
+            } catch (e) {
                 isExternalUpdateFlag = false;
-            }
+                throw e;
         }
+    },
+        destroy: () => {
+            // Stop all watchers
+            watchers.forEach(unwatch => unwatch());
+            watchers.clear();
+        }
+
     };
 }
 

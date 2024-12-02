@@ -23,8 +23,6 @@
     "url": "https://github.com/HelixForge/vue-form-watchers/issues"
   },
   "homepage": "https://github.com/HelixForge/vue-form-watchers#readme",
-  "dependencies": {
-  },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
@@ -38,18 +36,21 @@
     "LICENSE"
   ],
   "devDependencies": {
-    "rollup": "^4.28.0",
-    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.22.20",
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^25.0.0",
-    "@babel/core": "^7.23.0",
-    "@babel/preset-env": "^7.22.20"
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "rollup": "^4.28.0",
+    "vitest": "^2.1.8"
   },
   "peerDependencies": {
     "vue": "^3.0.0"
   },
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "test:coverage": "vitest run --coverage"
   },
   "engines": {
     "node": ">=14.16"
