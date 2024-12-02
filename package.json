@@ -3,7 +3,9 @@
   "description": "A utility to dynamically create debounced watchers for reactive form fields in Vue 3.",
   "version": "0.2.2",
   "license": "MIT",
-
+  "publishConfig": {
+    "access": "public"
+  },
   "private": false,
   "type": "commonjs",
   "types": "src/index.d.ts",
