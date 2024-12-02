@@ -1,4 +1,4 @@
-import { watch } from "vue";
+import {watch} from "vue";
 
 /**
  * Creates a debounced function that delays invoking func until after wait milliseconds
@@ -15,7 +15,7 @@ function createDebouncer(func, wait = 0) {
  * Logger utility for debugging form watcher events
  */
 const createLogger = (debug = false) => ({
-    valueChange: (key, { oldValue, newValue, source }) => {
+    valueChange: (key, {oldValue, newValue, source}) => {
         if (debug) {
             console.log(`Value changed for ${key}:`, {
                 from: oldValue,
@@ -65,7 +65,7 @@ function createFieldWatcher(
                 ? (isExternalUpdate(key, newValue, oldValue) ? 'external' : 'user')
                 : (isExternalUpdateFlag ? 'external' : 'user');
 
-            logger.valueChange(key, { oldValue, newValue, source: updateSource });
+            logger.valueChange(key, {oldValue, newValue, source: updateSource});
 
             if (skipExternalUpdates && updateSource === 'external') {
                 logger.skippedUpdate(key);
@@ -74,7 +74,7 @@ function createFieldWatcher(
 
             updateFunctionDebounced(key, newValue, updateSource);
         },
-        { deep: true, immediate }
+        {deep: true, immediate}
     );
 }
 
@@ -96,7 +96,7 @@ function createObjectWatcher(
             createWatcherConfig.logger.newProperties(addedKeys);
             addedKeys.forEach(key => createFieldWatcher(formObject, key, createWatcherConfig));
         }
-    }, { deep: true });
+    }, {deep: true});
 }
 
 
@@ -119,8 +119,8 @@ export function createFormWatchers(formObject, updateFunction, options = {}) {
         isExternalUpdate = null,
         debug = false
     } = options;
-console.log('debounceTime', debounceTime);
-console.log('debug', debug);
+    console.log('debounceTime', debounceTime);
+    console.log('debug', debug);
     let isExternalUpdateFlag = false;
     const logger = createLogger(debug);
 
