@@ -28,6 +28,13 @@ declare module "vue-form-watchers" {
         options?: {
             debounceTime?: number;
             immediate?: boolean;
+            skipExternalUpdates?: boolean;
+            isExternalUpdate?: (key: string, newValue: any, oldValue: any) => boolean;
+            debug?: boolean;
+            exclude?: string[];
         }
-    ): void;
+    ): {
+        markUpdateAsExternal: (callback: () => void) => void;
+        destroy: () => void;
+    }
 }
