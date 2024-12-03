@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import {ref, nextTick} from 'vue'
 import { createFormWatchers } from '../src/index'
 
 describe('createFormWatchers', () => {
@@ -122,3 +122,100 @@ describe('createFormWatchers', () => {
             .toThrow('exclude option must be an array')
     })
 })
+
+describe('Form Watcher Cleanup', () => {
+    let updateFn
+    let form
+
+    beforeEach(() => {
+        vi.useFakeTimers()
+        updateFn = vi.fn()
+        form = ref({
+            name: '',
+            email: ''
+        })
+    })
+
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
+
+    it('should properly clean up watchers on unmount', async () => {
+        const cleanup = ref(null);
+        const { destroy } = createFormWatchers(form.value, updateFn, { debounceTime: 100 });
+        cleanup.value = destroy;
+
+        // Test initial update
+        form.value.name = 'test';
+        await nextTick();
+        vi.runAllTimers();
+
+        // Cleanup
+        cleanup.value();
+        vi.clearAllTimers();
+
+        // Verify no more updates
+        updateFn.mockClear();
+        form.value.name = 'test2';
+        await nextTick();
+        vi.runAllTimers();
+        expect(updateFn).not.toHaveBeenCalled();
+    });
+
+    it('should handle errors in markUpdateAsExternal', async () => {
+        const { markUpdateAsExternal } = createFormWatchers(form.value, updateFn);
+
+        expect(() => markUpdateAsExternal(() => {
+            throw new Error('test error');
+        })).toThrow('test error');
+
+        // Verify flag was reset
+        form.value.name = 'test';
+        await nextTick();
+        vi.runAllTimers();
+        expect(updateFn).toHaveBeenCalledWith('name', 'test', 'user');
+    });
+
+    it('should log debug messages when enabled', async () => {
+        const spy = vi.spyOn(console, 'log');
+
+        createFormWatchers(form.value, updateFn, { debug: true });
+
+        form.value.name = 'test';
+        await nextTick();
+        vi.runAllTimers();
+
+        expect(spy).toHaveBeenCalledWith('Value changed for name:', expect.any(Object));
+        expect(spy).toHaveBeenCalledWith('Debounced update for:', 'name', 'test', 'from:', 'user');
+
+        // Test skipped update
+        const { markUpdateAsExternal } = createFormWatchers(form.value, updateFn, {
+            debug: true,
+            skipExternalUpdates: true
+        });
+
+        markUpdateAsExternal(() => {
+            form.value.email = 'test@test.com';
+        });
+        await nextTick();
+        vi.runAllTimers();
+
+        expect(spy).toHaveBeenCalledWith('Skipping external update for:', 'email');
+
+        // Test new properties
+        form.value.newField = 'test';
+        await nextTick();
+        expect(spy).toHaveBeenCalledWith('New properties detected:', ['newField']);
+    });
+
+    it('should log debug message on destroy', async () => {
+        const spy = vi.spyOn(console, 'log');
+        const { destroy } = createFormWatchers(form.value, updateFn, { debug: true });
+
+        destroy();
+
+        expect(spy).toHaveBeenCalledWith('Destroying form watchers');
+    });
+
+
+});

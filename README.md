@@ -1,6 +1,7 @@
 # vue-form-watchers
 
-A lightweight utility for Vue 3 that creates dynamic, debounced watchers for reactive form fields. This package helps you efficiently manage form state changes and synchronization with minimal boilerplate code.
+A lightweight utility for Vue 3 that creates dynamic, debounced watchers for reactive form fields. This package helps
+you efficiently manage form state changes and synchronization with minimal boilerplate code.
 
 ## Features
 
@@ -22,89 +23,163 @@ npm install vue-form-watchers
 ### Basic Usage
 
 ```javascript
-import { ref } from 'vue'
-import { createFormWatchers } from 'vue-form-watchers'
+import {ref, onUnmounted} from 'vue'
+import {createFormWatchers} from 'vue-form-watchers'
 
 export default {
-  setup() {
-    const form = ref({
-      name: '',
-      email: '',
-      age: 0
-    })
+    setup() {
+        const form = ref({
+            name: '',
+            email: '',
+            age: 0
+        })
 
-    createFormWatchers(
-      form.value,
-      (key, value) => {
-        console.log(`Field ${key} updated to:`, value)
-        // Handle the update (e.g., API calls, validation)
-      }
-    )
+        // Store the destroy function for cleanup
+        const {destroy} = createFormWatchers(form.value, (key, value, source) => {
+            console.log(`${key} changed to ${value} (${source})`)
+            // Perform validation, API calls, or other operations
+        })
 
-    return { form }
-  }
+        // Clean up watchers when component unmounts
+        onUnmounted(() => {
+            destroy()
+        })
+
+        return {form}
+    }
 }
 ```
 
 ### Advanced Configuration
 
 ```javascript
-import { ref } from 'vue'
-import { createFormWatchers } from 'vue-form-watchers'
+const {markUpdateAsExternal, destroy} = createFormWatchers(
+    form.value,
+    (key, value, source) => {
+        if (source === 'user') {
+            // Handle user-initiated changes
+            validateField(key, value)
+        }
+    },
+    {
+        debounceTime: 300,              // Customize debounce delay (default: 500ms)
+        immediate: true,                // Trigger on initialization (default: false)
+        skipExternalUpdates: true,      // Ignore programmatic updates (default: true)
+        debug: true,                    // Enable detailed logging (default: false)
+        exclude: ['tempField'],         // Fields to ignore
+        isExternalUpdate: (key, newValue, oldValue) => {
+            // Custom logic to identify external updates
+            return newValue === oldValue
+        }
+    }
+)
+```
+
+### Real-time Form Validation With API Integration
+
+```javascript
+import {ref, onUnmounted} from 'vue'
+import {createFormWatchers} from 'vue-form-watchers'
 
 export default {
-  setup() {
-    const form = ref({
-      username: '',
-      email: ''
-    })
+    setup() {
+        // Form state
+        const form = ref({
+            email: '',
+            password: '',
+            tempData: ''  // This field won't trigger validation
+        })
 
-    const { markUpdateAsExternal } = createFormWatchers(
-      form.value,
-      (key, value, source) => {
-        console.log(`${key} updated to ${value} (${source})`)
-      },
-      {
-        debounceTime: 300,           // Default: 500ms
-        immediate: true,             // Default: false
-        skipExternalUpdates: true,   // Default: true
-        isExternalUpdate: (key, newValue, oldValue) => {
-          // Custom logic to determine if update is external
-          return false
+        // Validation state
+        const errors = ref({})
+        const isValidating = ref(false)
+
+        // Create watchers with validation
+        const {markUpdateAsExternal, destroy} = createFormWatchers(
+            form.value,
+            async (key, value) => {
+                isValidating.value = true
+
+                try {
+                    // Example validation rules
+                    switch (key) {
+                        case 'email':
+                            await api.validateEmail(value)  // Check email format & uniqueness
+                            break
+                        case 'password':
+                            await api.validatePassword(value)  // Check password strength
+                            break
+                    }
+
+                    // Clear error when validation passes
+                    errors.value[key] = null
+
+                } catch (error) {
+                    // Store validation error message
+                    errors.value[key] = error.message
+                } finally {
+                    isValidating.value = false
+                }
+            },
+            {
+                debounceTime: 500,      // Wait 500ms after typing
+                exclude: ['tempData']   // Don't validate this field
+            }
+        )
+
+        // Load saved form data
+        const loadSavedData = async () => {
+            try {
+                const savedData = await api.getSavedForm()
+
+                // Use markUpdateAsExternal to prevent validation
+                // when loading saved data
+                markUpdateAsExternal(() => {
+                    Object.assign(form.value, savedData)
+                })
+            } catch (error) {
+                console.error('Failed to load saved data:', error)
+            }
         }
-      }
-    )
 
-    // Use markUpdateAsExternal for programmatic updates
-    const updateFormFromAPI = (data) => {
-      markUpdateAsExternal(() => {
-        form.value.username = data.username
-        form.value.email = data.email
-      })
+        // Clean up
+        onUnmounted(() => {
+            destroy()
+        })
+
+        // Template usage
+        return {
+            form,
+            errors,
+            isValidating,
+            loadSavedData
+        }
     }
-
-    return { form, updateFormFromAPI }
-  }
 }
-```
+````
 
 ## API Reference
 
 ### createFormWatchers
 
 ```typescript
-function createFormWatchers(
-  formObject: Record<string, any>,
-  updateFunction: (key: string, value: any, source?: 'user' | 'external') => void,
-  options?: {
-    debounceTime?: number;      // Debounce delay in milliseconds
-    immediate?: boolean;        // Trigger watchers immediately
-    skipExternalUpdates?: boolean; // Skip callback for external updates
-    isExternalUpdate?: (key: string, newValue: any, oldValue: any) => boolean;
-  }
-): {
-  markUpdateAsExternal: (callback: () => void) => void;
-}
+const {markUpdateAsExternal, destroy} = createFormWatchers(
+    form.value,
+    (key, value, source) => {
+        console.log(`Field ${key} changed to ${value} from ${source}`)
+    },
+    {
+        debounceTime: 300,              // Debounce delay (default: 500ms)
+        immediate: true,                // Trigger on initialization (default: false)
+        skipExternalUpdates: true,      // Ignore programmatic updates (default: true)
+        debug: true,                    // Enable detailed logging (default: false)
+        exclude: ['tempField'],         // Fields to ignore
+        isExternalUpdate: (key, newValue, oldValue) => {
+            // Custom logic to identify external updates
+            return someCondition
+        }
+    }
+)
 ```
 
 #### Parameters
@@ -115,9 +190,13 @@ function createFormWatchers(
 
 #### Returns
 
+- `markUpdateAsExternal`: Wrap form updates to prevent triggering watchers
+- `destroy`: Clean up watchers and event listeners
+
 An object containing the `markUpdateAsExternal` utility function for handling programmatic updates.
 
 #### Debug Logging
+
 When debug: true is set, the following events will be logged to the console:
 
 - Value changes for each field (old value, new value, and source)
@@ -132,12 +211,12 @@ This is useful for debugging and understanding the behavior of your form watcher
 ### Form Validation
 
 ```javascript
-import { ref } from 'vue'
-import { createFormWatchers } from 'vue-form-watchers'
+import {ref} from 'vue'
+import {createFormWatchers} from 'vue-form-watchers'
 
 const form = ref({
-  email: '',
-  password: ''
+    email: '',
+    password: ''
 })
 
 const errors = ref({})
@@ -159,18 +238,18 @@ createFormWatchers(form.value, async (key, value) => {
 ### API Synchronization
 
 ```javascript
-import { ref } from 'vue'
-import { createFormWatchers } from 'vue-form-watchers'
+import {ref} from 'vue'
+import {createFormWatchers} from 'vue-form-watchers'
 
 const form = ref({
-  title: '',
-  content: ''
+    title: '',
+    content: ''
 })
 
-const { markUpdateAsExternal } = createFormWatchers(
+const {markUpdateAsExternal} = createFormWatchers(
     form.value,
     async (key, value) => {
-        await api.updateDraft({ [key]: value })
+        await api.updateDraft({[key]: value})
     },
     {
         debounceTime: 1000,
@@ -186,6 +265,52 @@ const loadDraft = async () => {
     })
 }
 ```
+
+## Error Handling
+
+The createFormWatchers function includes error validation to ensure correct usage. Below are common errors that might be
+thrown and how to handle them:
+
+### Common Errors
+
+- Invalid formObject
+    - Error: `formObject must be a reactive object`
+    - Cause: The first parameter must be a Vue reactive object (e.g., created with ref or reactive).
+    - Solution: Ensure you pass a properly initialized reactive object.
+
+```javascript
+import {reactive} from 'vue';
+
+const form = reactive({name: '', email: ''});
+createFormWatchers(form, updateFunction);
+```
+
+- Invalid updateFunction
+    - Error: `updateFunction must be a function`
+    - Cause: The second parameter must be a function that accepts three arguments (key, value, source).
+    - Solution: Pass a valid function that processes field updates.
+
+```javascript
+createFormWatchers(form, (key, value) => {
+    console.log(`${key} changed to ${value}`);
+});
+```
+
+- Invalid exclude Option
+    - Error: `exclude must be an array of strings`
+    - Cause: The second parameter must be a valid callback function to handle updates.
+    - Solution: Pass a valid function that processes field updates.
+
+```javascript
+createFormWatchers(form, updateFunction, { exclude: ['tempField'] });
+```
+
+### Best Practices for Error Prevention
+- Reactive Sources: Always use reactive objects  `ref`, `reactive`, or Pinia's reactive state(`this.$state`) as the 
+`formObject` to ensure compatibility
+- Custom Logic Validation: Validate custom logic for `isExternalUpdate` to ensure proper function definitions and avoid unintended behavior.
+- Type Safety: Use TypeScript to leverage type-checking for configuration options and ensure consistent implementation.
+- State Management: When working with Pinia, initialize watchers in the appropriate lifecycle methods (e.g.,` onMounted`) and clean them up (e.g., onUnmounted) to avoid memory leaks.
 
 ## Requirements
 
